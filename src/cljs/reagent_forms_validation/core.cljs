@@ -1,41 +1,77 @@
 (ns reagent-forms-validation.core
   (:require [reagent.core :as reagent :refer [atom]]
             [reagent-forms.core :refer [bind-fields]]
-            [bouncer.core :as bouncer]
-            [bouncer.validators :as validators]
+            [bouncer.core :as b]
+            [bouncer.validators :as v]
             [reagent.session :as session]
             [secretary.core :as secretary :include-macros true]
             [accountant.core :as accountant]))
 
 ;;--------------------------------------------------------------------
 ;; creating form template to represent our form
-;; craete row
+;; create row
 (defn row [label input]
-  [:dev.row
-   [:div.col-md-2 [:label label]]
-   [:div.col-md-5 input]])
+  [:div.row
+   [:div.col-md-4 [:label label]]
+   [:div.col-md-8 input]])
+
+;; create input field
+(defn input [label type id]
+  (row label [:input.form-control {:field type :id id}]))
 
 ;; create form-template
-(def form-template
-  [:div
-   (row "first name :"
-        [:input.form-control {:field :text :id :first-name}])
-   (row "last name :"
-        [:input.form-control {:field :text :id :last-name}])
-   (row "age :"
-        [:input.form-control {:field :numeric :id :age}])
-   (row "email :"
-        [:input.form-control {:field :email :id :email}])
-   (row "comments :"
-        [:textarea.form-control {:field :textarea :id :comments}])
+(defn form-template [data]
+  [:div.form-div
+   [bind-fields (input "First Name :" :text :first-name) data]
+   [:p.validation-error
+    (first
+     (first
+      (b/validate @data
+                  :first-name [[v/required :message "^*"]
+                               [v/matches #"^[A-Za-z]+$"]])))]
+
+   [bind-fields (input "Last Name :" :text :last-name) data]
+   [:p.validation-error
+    (first
+     (first
+      (b/validate @data
+                  :last-name [[v/required :message "^*"]
+                              [v/matches #"^[A-Za-z]+$"]])))]
+   [bind-fields (input "Age :" :text :age) data]
+   [:p.validation-error
+    (first
+     (first
+      (b/validate @data
+                  :age [[v/required :message "^*"]
+                        [v/matches #"[0-9]+"]])))]
+   [bind-fields (input "Email :" :email :email) data]
+   [:p.validation-error
+    (first
+     (first
+      (b/validate @data
+                  :email [[v/required :message "^*"]
+                          [v/email]])))]
+   [bind-fields (input "Comments :" :textarea :comments) data]
+   [:p.validation-error
+    (first
+     (first
+      (b/validate @data
+                  :comments [[v/required :message "^*"]
+                             [v/string]])))]
+
+   ;; (input "First Name :" :text :first-name)
+   ;; (input "Last Name :" :text :last-name)
+   ;; (input "Age :" :numeric :age)
+   ;; (input "Email :" :email :email)
+   ;; (input "Comments :" :textarea :comments)
    ])
 
 (defn form []
   (let [doc (atom {})]
     (fn []
-      [:div
+      [:div.form-group
        [:div.page-header [:h4 "Reagent Form"]]
-       [bind-fields form-template doc]
+       [form-template doc]
        [:label (str @doc)]])))
 
 ;;--------------------------------------------------------------------
@@ -59,6 +95,8 @@
    [:div [:a {:href "/"} "home page"]]
    [:div [:h2 "validating using bouncer in reagent-forms"]
     [form]]])
+
+;;--------------------------------------------------------------------
 
 (defn current-page []
   [:div [(session/get :current-page)]])
